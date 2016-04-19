@@ -2,6 +2,6 @@
 
 <asp:Content ID="BodyContent" ContentPlaceHolderID="MainContent" runat="server">
 
-    <img width="500" height="500" src="DrawMap.ashx"/>
+    <img width="741" height="856" src="DrawMap.ashx?width=741&height=856"/>
 
 </asp:Content>

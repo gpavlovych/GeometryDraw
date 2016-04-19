@@ -28,9 +28,18 @@ namespace TestGeometryDrawWebApplication
                              };
             var font = new Font(FontFamily.GenericMonospace, 8, FontStyle.Bold);
             var legendFontColor = Color.Black;
+            var widthStr = context.Request[ "width" ] ?? "";
+            var heightStr = context.Request[ "height" ] ?? "";
+
+            int width;
+            int height;
+            if (!int.TryParse(widthStr, out width))
+                width = 500;
+            if (!int.TryParse(heightStr, out height))
+                height = 500;
             using (
                 var result = MapHelper.DrawMap(
-                    new Size(500, 500),
+                    new Size(width, height),
                     50,
                     50,
                     50,
@@ -43,10 +52,10 @@ namespace TestGeometryDrawWebApplication
                     1.5f))
             {
                 // set MIME type
-                context.Response.ContentType = "image/jpeg";
+                context.Response.ContentType = "image/png";
 
                 // write to response stream
-                result.Save(context.Response.OutputStream, ImageFormat.Jpeg);
+                result.Save(context.Response.OutputStream, ImageFormat.Png);
             }
 
         }
