@@ -55,6 +55,7 @@
     <Compile Include="city.cs">
       <DependentUpon>geo.tt</DependentUpon>
     </Compile>
+    <Compile Include="CityAppearanceInfo.cs" />
     <Compile Include="CityInfo.cs" />
     <Compile Include="Class1.cs" />
     <Compile Include="geo.Context.cs">

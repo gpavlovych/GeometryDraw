@@ -45,6 +45,7 @@ namespace TestGeometryDrawWebApplication
                     50,
                     50,
                     Color.White,
+                    new Pen(Color.Black, 1.0f),
                     legend,
                     legendCaption,
                     font,

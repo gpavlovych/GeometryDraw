@@ -44,6 +44,7 @@ namespace TestGeometryDraw
                     50,
                     50,
                     Color.White,
+                    new Pen(Color.Black,1.0f), 
                     legend,
                     legendCaption,
                     font,
@@ -56,5 +57,35 @@ namespace TestGeometryDraw
         }
 
         #endregion
+
+        #region Overrides of Control
+
+        /// <summary>
+        /// Raises the <see cref="E:System.Windows.Forms.Control.MouseClick"/> event.
+        /// </summary>
+        /// <param name="e">An <see cref="T:System.Windows.Forms.MouseEventArgs"/> that contains the event data. </param>
+        protected override void OnMouseClick(MouseEventArgs e)
+        {
+            base.OnMouseClick(e);
+            var city = MapHelper.GetCityAtPoint(
+                new Size(this.ClientSize.Width, this.ClientSize.Height),
+                50,
+                50,
+                50,
+                50,
+                new PointF(e.X, e.Y));
+        }
+
+        #endregion
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+
+        }
+
+        private void Form1_Click(object sender, EventArgs e)
+        {
+            //MouseH
+        }
     }
 }

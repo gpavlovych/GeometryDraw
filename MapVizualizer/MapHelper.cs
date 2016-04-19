@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Data.Entity.Spatial;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
@@ -10,28 +11,56 @@ namespace MapVizualizer
 {
     public static class MapHelper
     {
+        public static CityAppearanceInfo GetCityAtPoint(
+            Size imageSize,
+            int paddingLeft,
+            int paddingRight,
+            int paddingTop,
+            int paddingBottom,
+            PointF point)
+        {
+
+
+            using (var geoEntitiesContext = new geoEntities())
+            {
+                var cityInfos = GetCityInfos(geoEntitiesContext).ToList();
+                var transformer = new Transformer(
+                    cityInfos,
+                    imageSize,
+                    paddingLeft,
+                    paddingRight,
+                    paddingTop,
+                    paddingBottom);
+                var geoPoint= transformer.TransformBack(point);
+                return cityInfos.Where(it => it.Geometry.Contains(geoPoint)).Select(it=>it.Appearance).FirstOrDefault();
+            }
+        }
+
         /// <summary>
-        /// Draws the map of cities provided in the SQL database.
-        /// </summary>
-        /// <param name="imageSize">Size of the image.</param>
-        /// <param name="paddingLeft">The padding left.</param>
-        /// <param name="paddingRight">The padding right.</param>
-        /// <param name="paddingTop">The padding top.</param>
-        /// <param name="paddingBottom">The padding bottom.</param>
-        /// <param name="backgroundColor">Color of the background.</param>
-        /// <param name="legendItems">The legend items.</param>
-        /// <param name="legendCaption">The legend caption.</param>
-        /// <param name="legendFont">The legend font.</param>
-        /// <param name="legendFontColor">Color of the legend font.</param>
-        /// <param name="lineSpacing">The line spacing.</param>
-        /// <returns></returns>
-        public static Image DrawMap(
+                /// Draws the map of cities provided in the SQL database.
+                /// </summary>
+                /// <param name="imageSize">Size of the image.</param>
+                /// <param name="paddingLeft">The padding left.</param>
+                /// <param name="paddingRight">The padding right.</param>
+                /// <param name="paddingTop">The padding top.</param>
+                /// <param name="paddingBottom">The padding bottom.</param>
+                /// <param name="backgroundColor">Color of the background.</param>
+                /// <param name="borderPen">The border pen.</param>
+                /// <param name="legendItems">The legend items.</param>
+                /// <param name="legendCaption">The legend caption.</param>
+                /// <param name="legendFont">The legend font.</param>
+                /// <param name="legendFontColor">Color of the legend font.</param>
+                /// <param name="lineSpacing">The line spacing.</param>
+                /// <returns></returns>
+            public static
+            Image DrawMap(
             Size imageSize,
             int paddingLeft,
             int paddingRight,
             int paddingTop,
             int paddingBottom,
             Color backgroundColor,
+            Pen borderPen,
             IDictionary<Color, string> legendItems,
             string legendCaption,
             Font legendFont,
@@ -46,43 +75,129 @@ namespace MapVizualizer
                 graphics.Clear(backgroundColor);
                 using (var geoEntitiesContext = new geoEntities())
                 {
-                    var cityInfos = GetCityInfos(geoEntitiesContext);
-                    DrawCities(graphics, paddingLeft, paddingRight, paddingTop, paddingBottom, cityInfos);
-                    DrawLegend(graphics, paddingLeft, paddingTop, legendItems, legendCaption, legendFont, legendFontColor, lineSpacing);
+                    var cityInfos = GetCityInfos(geoEntitiesContext).ToList();
+                    DrawCities(
+                        graphics,
+                        borderPen,
+                        imageSize,
+                        paddingLeft,
+                        paddingRight,
+                        paddingTop,
+                        paddingBottom,
+                        cityInfos);
+                    DrawLegend(
+                        graphics,
+                        paddingLeft,
+                        paddingTop,
+                        legendItems,
+                        legendCaption,
+                        legendFont,
+                        legendFontColor,
+                        lineSpacing);
                 }
             }
             return result;
         }
 
+        private static IEnumerable<DbGeometry> GetGeometryPoints(DbGeometry geometry)
+        {
+            var pointsCount = geometry.PointCount;
+            for (var pointIndex = 1; pointIndex <= pointsCount; pointIndex++)
+            {
+                var point = geometry.PointAt(pointIndex);
+                if (point != null && point.XCoordinate != null && point.YCoordinate != null)
+                {
+                    yield return point;
+                }
+            }
+        }
+
+        private class Transformer
+        {
+            private readonly float _coeff;
+
+            private int _coordinateSystemId;
+
+            private RectangleF _visibleArea;
+
+            private readonly float _xMax;
+
+            private readonly float _xMin;
+
+            private readonly float _yMax;
+
+            private readonly float _yMin;
+
+            public Transformer(
+                IEnumerable<CityInfo> cityInfos,
+                SizeF size,
+                int paddingLeft,
+                int paddingRight,
+                int paddingTop,
+                int paddingBottom)
+            {
+                var allVertices =
+                    cityInfos.SelectMany(cityVertices => GetGeometryPoints(cityVertices.Geometry)).ToList();
+                this._xMax = (float) allVertices.Max(point => point.XCoordinate.Value);
+                this._xMin = (float) allVertices.Min(point => point.XCoordinate.Value);
+                this._yMax = (float) allVertices.Max(point => point.YCoordinate.Value);
+                this._yMin = (float) allVertices.Min(point => point.YCoordinate.Value);
+                this._coordinateSystemId = allVertices.Select(vert => vert.CoordinateSystemId).Distinct().Single();
+                this._visibleArea = new RectangleF(
+                    0 + paddingLeft,
+                    0 + paddingTop,
+                    size.Width - paddingRight - paddingLeft,
+                    size.Height - paddingBottom - paddingTop);
+                this._coeff = Math.Min(this._visibleArea.Width, this._visibleArea.Height);
+            }
+
+            public PointF Transform(DbGeometry pnt)
+            {
+                if (pnt.XCoordinate != null && pnt.YCoordinate != null)
+                {
+                    return
+                        new PointF(
+                            this._visibleArea.Left + this._visibleArea.Width / 2
+                            + this._coeff
+                            * ( ( (float) pnt.XCoordinate.Value - this._xMin ) / ( this._xMax - this._xMin ) - 0.5f ),
+                            this._visibleArea.Top + this._visibleArea.Height / 2
+                            - this._coeff
+                            * ( ( (float) pnt.YCoordinate.Value - this._yMin ) / ( this._yMax - this._yMin ) - 0.5f ));
+
+                }
+                return new PointF(float.NaN, float.NaN);
+            }
+
+            public DbGeometry TransformBack(PointF point)
+            {
+                var xCoordinate = this._xMin
+                                  + ( ( point.X - this._visibleArea.Left - this._visibleArea.Width / 2 ) / this._coeff
+                                      + 0.5f ) * ( this._xMax - this._xMin );
+                var yCoordinate = this._yMin
+                                  + ( ( -point.Y + this._visibleArea.Top + this._visibleArea.Height / 2 ) / this._coeff
+                                      + 0.5f ) * ( this._yMax - this._yMin );
+                return DbGeometry.PointFromText(
+                    string.Format("POINT ({0} {1})", xCoordinate, yCoordinate),
+                    _coordinateSystemId);
+            }
+        }
+
         private static void DrawCities(
             Graphics graphics,
+            Pen borderPen,
+            SizeF size,
             int paddingLeft,
             int paddingRight,
             int paddingTop,
             int paddingBottom,
             IList<CityInfo> cityInfos)
         {
-            var allVertices = cityInfos.SelectMany(cityVertices => cityVertices.Vertices).ToList();
-            var xMax = allVertices.Max(point => point.X);
-            var xMin = allVertices.Min(point => point.X);
-            var yMax = allVertices.Max(point => point.Y);
-            var yMin = allVertices.Min(point => point.Y);
-            var visibleArea = new RectangleF(
-                graphics.VisibleClipBounds.X + paddingLeft,
-                graphics.VisibleClipBounds.Y + paddingTop,
-                graphics.VisibleClipBounds.Width - paddingRight - paddingLeft,
-                graphics.VisibleClipBounds.Height - paddingBottom - paddingTop);
-            var coeff = Math.Min(visibleArea.Width, visibleArea.Height);
+            var transformer = new Transformer(cityInfos, size, paddingLeft, paddingRight, paddingTop, paddingBottom);
             foreach (var cityInfo in cityInfos)
             {
-                graphics.FillPolygon(
-                    new SolidBrush(cityInfo.Color),
-                    cityInfo.Vertices.Select(
-                        pnt =>
-                        new PointF(
-                            visibleArea.Left + visibleArea.Width / 2 + coeff * ( ( pnt.X - xMin ) / ( xMax - xMin ) - 0.5f ),
-                            visibleArea.Top + visibleArea.Height / 2 - coeff * ( ( pnt.Y - yMin ) / ( yMax - yMin ) - 0.5f )))
-                            .ToArray());
+                var vertices = GetGeometryPoints(cityInfo.Geometry).Select(pnt => transformer.Transform(pnt)).ToArray();
+                graphics.FillPolygon(new SolidBrush(cityInfo.Appearance.CityColor), vertices);
+                graphics.DrawPolygon(borderPen, vertices);
             }
         }
 
@@ -122,9 +237,29 @@ namespace MapVizualizer
             }
         }
 
-        private static IList<CityInfo> GetCityInfos(geoEntities geoEntitiesContext)
+        private static IEnumerable<CityInfo> GetCityInfos(geoEntities geoEntitiesContext)
         {
-            var cityInfos = new List<CityInfo>();
+            foreach (var cityItem in geoEntitiesContext.cities)
+            {
+                var geometry = cityItem.geometrie_fld;
+                if (geometry.IsValid)
+                {
+                    yield return new CityInfo
+                                     {
+                                         Geometry = cityItem.geometrie_fld,
+                                         Appearance = new CityAppearanceInfo
+                                                          {
+                                                              CityName = cityItem.city_name,
+                                                              CityColor = ColorTranslator.FromHtml(cityItem.show_color),
+                                                          }
+                                     };
+                }
+            }
+        }
+
+        private static IList<CityAppearanceInfo> GetCityAppearanceInfos(geoEntities geoEntitiesContext, PointF point)
+        {
+            var cityInfos = new List<CityAppearanceInfo>();
             foreach (var cityItem in geoEntitiesContext.cities)
             {
                 var geometry = cityItem.geometrie_fld;
@@ -132,21 +267,18 @@ namespace MapVizualizer
                 {
                     continue;
                 }
-                var cityVertices = new List<PointF>();
-                cityInfos.Add(
-                    new CityInfo
-                        {
-                            Vertices = cityVertices,
-                            Color = ColorTranslator.FromHtml(cityItem.show_color)
-                        });
-                for (var i = 1; i <= geometry.PointCount; i++)
+                if (
+                    geometry.Contains(
+                        DbGeometry.PointFromText(
+                            string.Format("POINT ({0} {1})", point.X, point.Y),
+                            geometry.CoordinateSystemId)))
                 {
-                    var point = geometry.PointAt(i);
-
-                    if (point.XCoordinate != null && point.YCoordinate != null)
-                    {
-                        cityVertices.Add(new PointF((float) point.XCoordinate.Value, (float) point.YCoordinate.Value));
-                    }
+                    cityInfos.Add(
+                        new CityAppearanceInfo
+                            {
+                                CityName = cityItem.city_name,
+                                CityColor = ColorTranslator.FromHtml(cityItem.show_color),
+                            });
                 }
             }
             return cityInfos;
