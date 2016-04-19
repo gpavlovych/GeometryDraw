@@ -7,17 +7,18 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace TestGeometryDraw
+namespace MapVizualizer
 {
     using System;
     using System.Data.Entity;
     using System.Data.Entity.Infrastructure;
     
-    public partial class geoEntities : DbContext
+    internal partial class geoEntities : DbContext
     {
         public geoEntities()
             : base("name=geoEntities")
         {
+            cities = Set<city>();
         }
     
         protected override void OnModelCreating(DbModelBuilder modelBuilder)
@@ -25,6 +26,6 @@ namespace TestGeometryDraw
             throw new UnintentionalCodeFirstException();
         }
     
-        public virtual DbSet<city> cities { get; set; }
+        internal virtual DbSet<city> cities { get; set; }
     }
 }

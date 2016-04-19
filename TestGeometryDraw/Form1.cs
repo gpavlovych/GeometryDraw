@@ -6,6 +6,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Linq;
+using System.Text;
 using System.Windows.Forms;
 using MapVizualizer;
 
@@ -74,18 +75,25 @@ namespace TestGeometryDraw
                 50,
                 50,
                 new PointF(e.X, e.Y));
+            var legend = new Dictionary<Color, string>()
+                             {
+                                 { ColorTranslator.FromHtml("#63BE7B"), ">95%" },
+                                 { ColorTranslator.FromHtml("#BDD881"), "90-95%" },
+                                 { ColorTranslator.FromHtml("#E9E583"), "60-90%" },
+                                 { ColorTranslator.FromHtml("#FA8E72"), "30-60%" },
+                                 { ColorTranslator.FromHtml("#E15151"), "<30%" },
+                                 { ColorTranslator.FromHtml("#BFBFBF"), "Onbekend" }
+                             };
+            if (city != null)
+            {
+                var stringBuilder = new StringBuilder();
+                stringBuilder.AppendFormat("City Name: {0}", city.CityName);
+                stringBuilder.AppendLine();
+                stringBuilder.AppendFormat("Value: {0}", legend[ city.CityColor ]);
+                MessageBox.Show(stringBuilder.ToString());
+            }
         }
 
         #endregion
-
-        private void Form1_Load(object sender, EventArgs e)
-        {
-
-        }
-
-        private void Form1_Click(object sender, EventArgs e)
-        {
-            //MouseH
-        }
     }
 }

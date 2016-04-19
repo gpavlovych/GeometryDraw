@@ -7,12 +7,12 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace TestGeometryDraw
+namespace MapVizualizer
 {
     using System;
     using System.Collections.Generic;
     
-    public partial class city
+    internal partial class city
     {
         public string city_name { get; set; }
         public Nullable<int> city_nr { get; set; }

@@ -5,12 +5,21 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Linq;
-using TestGeometryDraw;
 
 namespace MapVizualizer
 {
     public static class MapHelper
     {
+        /// <summary>
+        /// Gets the city at pixel (in rendered image), might be useful to show info on the image click.
+        /// </summary>
+        /// <param name="imageSize">Size of the image.</param>
+        /// <param name="paddingLeft">The padding left.</param>
+        /// <param name="paddingRight">The padding right.</param>
+        /// <param name="paddingTop">The padding top.</param>
+        /// <param name="paddingBottom">The padding bottom.</param>
+        /// <param name="point">The point on the image.</param>
+        /// <returns></returns>
         public static CityAppearanceInfo GetCityAtPoint(
             Size imageSize,
             int paddingLeft,
@@ -19,8 +28,6 @@ namespace MapVizualizer
             int paddingBottom,
             PointF point)
         {
-
-
             using (var geoEntitiesContext = new geoEntities())
             {
                 var cityInfos = GetCityInfos(geoEntitiesContext).ToList();
@@ -31,29 +38,29 @@ namespace MapVizualizer
                     paddingRight,
                     paddingTop,
                     paddingBottom);
-                var geoPoint= transformer.TransformBack(point);
-                return cityInfos.Where(it => it.Geometry.Contains(geoPoint)).Select(it=>it.Appearance).FirstOrDefault();
+                var geoPoint = transformer.TransformBack(point);
+                return
+                    cityInfos.Where(it => it.Geometry.Contains(geoPoint)).Select(it => it.Appearance).FirstOrDefault();
             }
         }
 
         /// <summary>
-                /// Draws the map of cities provided in the SQL database.
-                /// </summary>
-                /// <param name="imageSize">Size of the image.</param>
-                /// <param name="paddingLeft">The padding left.</param>
-                /// <param name="paddingRight">The padding right.</param>
-                /// <param name="paddingTop">The padding top.</param>
-                /// <param name="paddingBottom">The padding bottom.</param>
-                /// <param name="backgroundColor">Color of the background.</param>
-                /// <param name="borderPen">The border pen.</param>
-                /// <param name="legendItems">The legend items.</param>
-                /// <param name="legendCaption">The legend caption.</param>
-                /// <param name="legendFont">The legend font.</param>
-                /// <param name="legendFontColor">Color of the legend font.</param>
-                /// <param name="lineSpacing">The line spacing.</param>
-                /// <returns></returns>
-            public static
-            Image DrawMap(
+        /// Draws the map of cities provided in the SQL database.
+        /// </summary>
+        /// <param name="imageSize">Size of the image.</param>
+        /// <param name="paddingLeft">The padding left.</param>
+        /// <param name="paddingRight">The padding right.</param>
+        /// <param name="paddingTop">The padding top.</param>
+        /// <param name="paddingBottom">The padding bottom.</param>
+        /// <param name="backgroundColor">Color of the background.</param>
+        /// <param name="borderPen">The border pen.</param>
+        /// <param name="legendItems">The legend items.</param>
+        /// <param name="legendCaption">The legend caption.</param>
+        /// <param name="legendFont">The legend font.</param>
+        /// <param name="legendFontColor">Color of the legend font.</param>
+        /// <param name="lineSpacing">The line spacing.</param>
+        /// <returns></returns>
+        public static Image DrawMap(
             Size imageSize,
             int paddingLeft,
             int paddingRight,
@@ -99,18 +106,7 @@ namespace MapVizualizer
             return result;
         }
 
-        private static IEnumerable<DbGeometry> GetGeometryPoints(DbGeometry geometry)
-        {
-            var pointsCount = geometry.PointCount;
-            for (var pointIndex = 1; pointIndex <= pointsCount; pointIndex++)
-            {
-                var point = geometry.PointAt(pointIndex);
-                if (point != null && point.XCoordinate != null && point.YCoordinate != null)
-                {
-                    yield return point;
-                }
-            }
-        }
+        #region Transformer 
 
         private class Transformer
         {
@@ -138,10 +134,10 @@ namespace MapVizualizer
             {
                 var allVertices =
                     cityInfos.SelectMany(cityVertices => GetGeometryPoints(cityVertices.Geometry)).ToList();
-                this._xMax = (float) allVertices.Max(point => point.XCoordinate.Value);
-                this._xMin = (float) allVertices.Min(point => point.XCoordinate.Value);
-                this._yMax = (float) allVertices.Max(point => point.YCoordinate.Value);
-                this._yMin = (float) allVertices.Min(point => point.YCoordinate.Value);
+                this._xMax = (float)allVertices.Max(point => point.XCoordinate.Value);
+                this._xMin = (float)allVertices.Min(point => point.XCoordinate.Value);
+                this._yMax = (float)allVertices.Max(point => point.YCoordinate.Value);
+                this._yMin = (float)allVertices.Min(point => point.YCoordinate.Value);
                 this._coordinateSystemId = allVertices.Select(vert => vert.CoordinateSystemId).Distinct().Single();
                 this._visibleArea = new RectangleF(
                     0 + paddingLeft,
@@ -159,10 +155,10 @@ namespace MapVizualizer
                         new PointF(
                             this._visibleArea.Left + this._visibleArea.Width / 2
                             + this._coeff
-                            * ( ( (float) pnt.XCoordinate.Value - this._xMin ) / ( this._xMax - this._xMin ) - 0.5f ),
+                            * (((float)pnt.XCoordinate.Value - this._xMin) / (this._xMax - this._xMin) - 0.5f),
                             this._visibleArea.Top + this._visibleArea.Height / 2
                             - this._coeff
-                            * ( ( (float) pnt.YCoordinate.Value - this._yMin ) / ( this._yMax - this._yMin ) - 0.5f ));
+                            * (((float)pnt.YCoordinate.Value - this._yMin) / (this._yMax - this._yMin) - 0.5f));
 
                 }
                 return new PointF(float.NaN, float.NaN);
@@ -171,14 +167,31 @@ namespace MapVizualizer
             public DbGeometry TransformBack(PointF point)
             {
                 var xCoordinate = this._xMin
-                                  + ( ( point.X - this._visibleArea.Left - this._visibleArea.Width / 2 ) / this._coeff
-                                      + 0.5f ) * ( this._xMax - this._xMin );
+                                  + ((point.X - this._visibleArea.Left - this._visibleArea.Width / 2) / this._coeff
+                                      + 0.5f) * (this._xMax - this._xMin);
                 var yCoordinate = this._yMin
-                                  + ( ( -point.Y + this._visibleArea.Top + this._visibleArea.Height / 2 ) / this._coeff
-                                      + 0.5f ) * ( this._yMax - this._yMin );
+                                  + ((-point.Y + this._visibleArea.Top + this._visibleArea.Height / 2) / this._coeff
+                                      + 0.5f) * (this._yMax - this._yMin);
                 return DbGeometry.PointFromText(
                     string.Format("POINT ({0} {1})", xCoordinate, yCoordinate),
                     _coordinateSystemId);
+            }
+        }
+
+        #endregion Transformer
+
+        #region Private static methods
+
+        private static IEnumerable<DbGeometry> GetGeometryPoints(DbGeometry geometry)
+        {
+            var pointsCount = geometry.PointCount;
+            for (var pointIndex = 1; pointIndex <= pointsCount; pointIndex++)
+            {
+                var point = geometry.PointAt(pointIndex);
+                if (point != null && point.XCoordinate != null && point.YCoordinate != null)
+                {
+                    yield return point;
+                }
             }
         }
 
@@ -257,31 +270,6 @@ namespace MapVizualizer
             }
         }
 
-        private static IList<CityAppearanceInfo> GetCityAppearanceInfos(geoEntities geoEntitiesContext, PointF point)
-        {
-            var cityInfos = new List<CityAppearanceInfo>();
-            foreach (var cityItem in geoEntitiesContext.cities)
-            {
-                var geometry = cityItem.geometrie_fld;
-                if (!geometry.IsValid)
-                {
-                    continue;
-                }
-                if (
-                    geometry.Contains(
-                        DbGeometry.PointFromText(
-                            string.Format("POINT ({0} {1})", point.X, point.Y),
-                            geometry.CoordinateSystemId)))
-                {
-                    cityInfos.Add(
-                        new CityAppearanceInfo
-                            {
-                                CityName = cityItem.city_name,
-                                CityColor = ColorTranslator.FromHtml(cityItem.show_color),
-                            });
-                }
-            }
-            return cityInfos;
-        }
+        #endregion Private static methods
     }
 }

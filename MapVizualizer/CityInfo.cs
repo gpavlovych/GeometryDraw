@@ -6,7 +6,8 @@ namespace MapVizualizer
 {
     internal class CityInfo
     {
-        public CityAppearanceInfo Appearance{ get; set; }
+        public CityAppearanceInfo Appearance { get; set; }
+
         public DbGeometry Geometry { get; internal set; }
     }
 }

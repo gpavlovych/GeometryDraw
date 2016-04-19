@@ -24,7 +24,7 @@
     <!-- CSDL content -->
     <edmx:ConceptualModels>
       <Schema Namespace="geoModel" Alias="Self" annotation:UseStrongSpatialTypes="false" xmlns:annotation="http://schemas.microsoft.com/ado/2009/02/edm/annotation" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm">
-        <EntityType Name="city">
+        <EntityType Name="city" a:TypeAccess="Internal" xmlns:a="http://schemas.microsoft.com/ado/2006/04/codegeneration">
           <Key>
             <PropertyRef Name="id" />
           </Key>
@@ -35,8 +35,8 @@
           <Property Name="geometrie_fld" Type="Geometry" />
           <Property Name="id" Type="Int64" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
         </EntityType>
-        <EntityContainer Name="geoEntities" annotation:LazyLoadingEnabled="true">
-          <EntitySet Name="cities" EntityType="Self.city" />
+        <EntityContainer Name="geoEntities" annotation:LazyLoadingEnabled="true" a:TypeAccess="Internal" xmlns:a="http://schemas.microsoft.com/ado/2006/04/codegeneration">
+          <EntitySet Name="cities" EntityType="Self.city" a:GetterAccess="Internal" xmlns:a="http://schemas.microsoft.com/ado/2006/04/codegeneration" />
         </EntityContainer>
       </Schema>
     </edmx:ConceptualModels>
