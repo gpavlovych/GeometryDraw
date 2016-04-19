@@ -19,7 +19,7 @@ namespace MapVizualizer
         /// <param name="paddingTop">The padding top.</param>
         /// <param name="paddingBottom">The padding bottom.</param>
         /// <param name="point">The point on the image.</param>
-        /// <returns></returns>
+        /// <returns>The <see cref="CityAppearanceInfo"/> which is related to clicked area.</returns>
         public static CityAppearanceInfo GetCityAtPoint(
             Size imageSize,
             int paddingLeft,
@@ -59,7 +59,7 @@ namespace MapVizualizer
         /// <param name="legendFont">The legend font.</param>
         /// <param name="legendFontColor">Color of the legend font.</param>
         /// <param name="lineSpacing">The line spacing.</param>
-        /// <returns></returns>
+        /// <returns>The rendered image.</returns>
         public static Image DrawMap(
             Size imageSize,
             int paddingLeft,
