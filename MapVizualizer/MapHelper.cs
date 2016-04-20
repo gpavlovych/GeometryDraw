@@ -133,7 +133,7 @@ namespace MapVizualizer
                 int paddingBottom)
             {
                 var allVertices =
-                    cityInfos.SelectMany(cityVertices => GetGeometryPoints(cityVertices.Geometry)).ToList();
+                    cityInfos.SelectMany(cityVertices => GetGeometryPoints(cityVertices.Geometry.Envelope)).ToList();
                 this._xMax = (float) allVertices.Max(point => point.XCoordinate.Value);
                 this._xMin = (float) allVertices.Min(point => point.XCoordinate.Value);
                 this._yMax = (float) allVertices.Max(point => point.YCoordinate.Value);
