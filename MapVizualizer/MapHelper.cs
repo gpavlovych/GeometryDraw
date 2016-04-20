@@ -134,10 +134,10 @@ namespace MapVizualizer
             {
                 var allVertices =
                     cityInfos.SelectMany(cityVertices => GetGeometryPoints(cityVertices.Geometry)).ToList();
-                this._xMax = (float)allVertices.Max(point => point.XCoordinate.Value);
-                this._xMin = (float)allVertices.Min(point => point.XCoordinate.Value);
-                this._yMax = (float)allVertices.Max(point => point.YCoordinate.Value);
-                this._yMin = (float)allVertices.Min(point => point.YCoordinate.Value);
+                this._xMax = (float) allVertices.Max(point => point.XCoordinate.Value);
+                this._xMin = (float) allVertices.Min(point => point.XCoordinate.Value);
+                this._yMax = (float) allVertices.Max(point => point.YCoordinate.Value);
+                this._yMin = (float) allVertices.Min(point => point.YCoordinate.Value);
                 this._coordinateSystemId = allVertices.Select(vert => vert.CoordinateSystemId).Distinct().Single();
                 this._visibleArea = new RectangleF(
                     0 + paddingLeft,
@@ -155,10 +155,10 @@ namespace MapVizualizer
                         new PointF(
                             this._visibleArea.Left + this._visibleArea.Width / 2
                             + this._coeff
-                            * (((float)pnt.XCoordinate.Value - this._xMin) / (this._xMax - this._xMin) - 0.5f),
+                            * ( ( (float) pnt.XCoordinate.Value - this._xMin ) / ( this._xMax - this._xMin ) - 0.5f ),
                             this._visibleArea.Top + this._visibleArea.Height / 2
                             - this._coeff
-                            * (((float)pnt.YCoordinate.Value - this._yMin) / (this._yMax - this._yMin) - 0.5f));
+                            * ( ( (float) pnt.YCoordinate.Value - this._yMin ) / ( this._yMax - this._yMin ) - 0.5f ));
 
                 }
                 return new PointF(float.NaN, float.NaN);
@@ -167,11 +167,11 @@ namespace MapVizualizer
             public DbGeometry TransformBack(PointF point)
             {
                 var xCoordinate = this._xMin
-                                  + ((point.X - this._visibleArea.Left - this._visibleArea.Width / 2) / this._coeff
-                                      + 0.5f) * (this._xMax - this._xMin);
+                                  + ( ( point.X - this._visibleArea.Left - this._visibleArea.Width / 2 ) / this._coeff
+                                      + 0.5f ) * ( this._xMax - this._xMin );
                 var yCoordinate = this._yMin
-                                  + ((-point.Y + this._visibleArea.Top + this._visibleArea.Height / 2) / this._coeff
-                                      + 0.5f) * (this._yMax - this._yMin);
+                                  + ( ( -point.Y + this._visibleArea.Top + this._visibleArea.Height / 2 ) / this._coeff
+                                      + 0.5f ) * ( this._yMax - this._yMin );
                 return DbGeometry.PointFromText(
                     string.Format("POINT ({0} {1})", xCoordinate, yCoordinate),
                     _coordinateSystemId);
@@ -252,7 +252,21 @@ namespace MapVizualizer
 
         private static IEnumerable<CityInfo> GetCityInfos(geoEntities geoEntitiesContext)
         {
-            foreach (var cityItem in geoEntitiesContext.cities)
+            foreach (var cityItem in geoEntitiesContext.cities.SqlQuery(
+                @"SELECT  
+                    G.Id as id
+                  , G.gem_code as city_nr
+                  , G.gem_naam as city_name
+                  , GEO.geometrie_fld as geometrie_fld
+                  , L.leg_item_kleur_hex as show_color
+                  , RPT.perc_match as is_water
+                FROM    dbo.ref_geo_coderingen GEO
+                  INNER JOIN dbo.ref_gemeente G ON G.gem_code = GEO.geo_code_num
+                        LEFT JOIN[dbo].[vw_rpt_match_huidig] RPT ON RPT.gem_code = GEO.geo_code_num
+                        LEFT JOIN dbo.ref_legenda_item L
+                    ON ISNULL(RPT.perc_match, -1) BETWEEN ISNULL(leg_item_min, -1) AND ISNULL(leg_item_max, -1)
+                WHERE   GEO.regio_type = 'Gemeente'
+                    AND GEO.water_code = 'NEE'"))
             {
                 var geometry = cityItem.geometrie_fld;
                 if (geometry.IsValid)
