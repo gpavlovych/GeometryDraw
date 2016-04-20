@@ -208,10 +208,34 @@ namespace MapVizualizer
             var transformer = new Transformer(cityInfos, size, paddingLeft, paddingRight, paddingTop, paddingBottom);
             foreach (var cityInfo in cityInfos)
             {
-                var vertices = GetGeometryPoints(cityInfo.Geometry).Select(pnt => transformer.Transform(pnt)).ToArray();
-                graphics.FillPolygon(new SolidBrush(cityInfo.Appearance.CityColor), vertices);
-                graphics.DrawPolygon(borderPen, vertices);
+                DrawGeometry(cityInfo.Geometry, cityInfo.Appearance.CityColor, graphics, borderPen, cityInfo, transformer);
             }
+        }
+
+        private static void DrawGeometry(
+            DbGeometry geometry,
+            Color color,
+            Graphics graphics,
+            Pen borderPen,
+            CityInfo cityInfo,
+            Transformer transformer)
+        {
+            var childGeometryCount = geometry.ElementCount ?? 0;
+            if (childGeometryCount > 1)
+            {
+                for (var i = 1; i <= childGeometryCount; i++)
+                    DrawGeometry(
+                        geometry.ElementAt(i),
+                        cityInfo.Appearance.CityColor,
+                        graphics,
+                        borderPen,
+                        cityInfo,
+                        transformer);
+                return;
+            }
+            var vertices = GetGeometryPoints(geometry).Select(pnt => transformer.Transform(pnt)).ToArray();
+            graphics.FillPolygon(new SolidBrush(color), vertices);
+            graphics.DrawPolygon(borderPen, vertices);
         }
 
         private static void DrawLegend(
@@ -252,24 +276,19 @@ namespace MapVizualizer
 
         private static IEnumerable<CityInfo> GetCityInfos(geoEntities geoEntitiesContext)
         {
+            //geoEntitiesContext.Database.Connection.Open();
             foreach (var cityItem in geoEntitiesContext.cities.SqlQuery(
-                @"SELECT  
-                    G.Id as id
-                  , G.gem_code as city_nr
-                  , G.gem_naam as city_name
-                  , GEO.geometrie_fld as geometrie_fld
-                  , L.leg_item_kleur_hex as show_color
-                  , RPT.perc_match as is_water
-                FROM    dbo.ref_geo_coderingen GEO
-                  INNER JOIN dbo.ref_gemeente G ON G.gem_code = GEO.geo_code_num
-                        LEFT JOIN[dbo].[vw_rpt_match_huidig] RPT ON RPT.gem_code = GEO.geo_code_num
-                        LEFT JOIN dbo.ref_legenda_item L
-                    ON ISNULL(RPT.perc_match, -1) BETWEEN ISNULL(leg_item_min, -1) AND ISNULL(leg_item_max, -1)
-                WHERE   GEO.regio_type = 'Gemeente'
-                    AND GEO.water_code = 'NEE'"))
+                @"SELECT
+                   CAST(city_nr AS BIGINT) as id
+                  , city_nr as city_nr
+                  , city_name as city_name
+                  , geometrie_fld as geometrie_fld
+                  , show_color as show_color
+                  , is_water as is_water
+                FROM dbo.city"))
             {
                 var geometry = cityItem.geometrie_fld;
-                if (geometry.IsValid)
+                if (geometry.IsValid && (geometry.IsClosed ?? false))
                 {
                     yield return new CityInfo
                                      {
