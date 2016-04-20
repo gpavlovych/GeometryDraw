@@ -209,6 +209,21 @@ namespace MapVizualizer
             foreach (var cityInfo in cityInfos)
             {
                 DrawGeometry(cityInfo.Geometry, cityInfo.Appearance.CityColor, graphics, borderPen, cityInfo, transformer);
+                var points = GetGeometryPoints(cityInfo.Geometry.Boundary).Select(it => transformer.Transform(it));
+                var minX = points.Min(it => it.X);
+                var minY = points.Min(it => it.Y);
+                var maxX = points.Max(it => it.X);
+                var maxY = points.Max(it => it.Y);
+                var width = maxX - minX;
+                var height = maxY - minY;
+                var measurement = graphics.MeasureString(
+                    cityInfo.Appearance.CityName,
+                    new Font(FontFamily.GenericMonospace, 8, FontStyle.Regular));
+                if (width > measurement.Width && height > measurement.Height) //verify if there is enough room
+                {
+                    var centerPoint = new PointF((maxX+minX)/2, (maxY+minY)/2);
+                    graphics.DrawString(cityInfo.Appearance.CityName, new Font(FontFamily.GenericMonospace, 8, FontStyle.Regular), new SolidBrush(Color.Black), centerPoint.X-width/2, centerPoint.Y-height/2);
+                }
             }
         }
 
